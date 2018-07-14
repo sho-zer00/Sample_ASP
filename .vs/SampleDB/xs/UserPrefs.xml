@@ -1,0 +1,18 @@
+﻿<Properties StartupConfiguration="{97B8FD8E-F0FF-4B4C-93DF-D8BEB196EDBC}|">
+  <MonoDevelop.Ide.ItemProperties.SampleDB.Tests FirstBuild="True" />
+  <MonoDevelop.Ide.ItemProperties.SampleDB PreferredExecutionTarget="MonoDevelop.Default" FirstBuild="True" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="SampleDB/Web.config">
+    <Files>
+      <File FileName="SampleDB/Default.aspx" Line="1" Column="1" />
+      <File FileName="SampleDB/Default.aspx.cs" Line="1" Column="1" />
+      <File FileName="SampleDB/Default.aspx.designer.cs" Line="1" Column="1" />
+      <File FileName="SampleDB/Web.config" Line="1" Column="1" />
+    </Files>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MultiItemStartupConfigurations />
+</Properties>
