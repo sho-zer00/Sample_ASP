@@ -15,8 +15,10 @@ output.Type = 2
 output.Charset = "UTF-8"
 output.Open
 
-' 変数の定義
+' 読み込まれたデータを代入する変数
 Dim strLine
+
+' 読み込んだデータを配列に入れるための宣言
 Dim arrFields
 
 ' 表示用のメッセージ変数
@@ -36,22 +38,36 @@ lineCount = 0
 Dim intCounter
 intCounter = 0
 
-' --縦横変換
+' --縦横変換--
 Do Until input.EOS
-    strLine = input.ReadText(-2) '-2という数字は一行ずつ呼び込むことを表しています。ちなみに-1は全読み込み
-    arrFields = Split(strLine,vbTab)
+    ' ファイルを1行ずつ読み込む。-2という数字は一行ずつ呼び込むことを表している。
+    strLine = input.ReadText(-2) 
+
+    ' 読み込んだデータを一次配列に入れる
+    arrFields = Split(strLine,vbTab) 
+
+    ' 縦横変換の際の固定文字を格納する
     strFix = "" 
     For intCounter = 0 To 6 Step 1
         strFix = strFix & arrFields(intCounter) & vbTab
     Next
+
+    ' 最初の行を読み込むときの処理
     If lineCount = 0 Then
 
+        ' 項目名は配列に格納（縦横変換の値で使用するため）
         For intCounter = 0 To 18 Step 1
             columName(intCounter) = arrFields(intCounter)
         Next
+
+        ' 項目名の表示
         strMessage = strFix & "Month" & vbTab & "Value" & vbCrLf
         output.WriteText strMessage,0
+
+    ' 最初の行以外を読み込むときの処理
     Else
+
+        ' 固定文字＋4月～3月の出荷台数の表示
         For intCounter = 7 To 18 Step 1
             strMessage = strFix & columName(intCounter) & vbTab & arrFields(intCounter) & vbCrLf
             output.WriteText strMessage,0
@@ -59,6 +75,7 @@ Do Until input.EOS
         
     End If
     
+    ' ループカウンタを増やす
     lineCount = lineCount + 1
 
 Loop
