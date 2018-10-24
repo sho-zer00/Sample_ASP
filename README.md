@@ -88,6 +88,10 @@ Set preout = CreateObject("ADODB.Stream")
 preout.Type = 2
 preout.Charset = "UTF-8"
 
+' 最終項目に年度を追記するための変数（取得するコマンドライン引数から数字の部分を抜き出す）
+Dim year
+year = Mid(InputFile,9,4)
+
 '------------------------------------
 ' ファイルの有無チェック
 '------------------------------------
@@ -150,7 +154,7 @@ Sub Unpivot()
 	    Else
 		
 			' 読み込み成功の場合、読み込み成功の旨のメッセージを表示する
-	    	log.WriteLine FormatDateTime(Now, 0)& " " & "出荷台数データ [" & InputFile & "]の" & lineCount + 1 &"行目の読み込み完了"  
+	    	log.WriteLine FormatDateTime(Now, 0)& " " & "出荷台数データ [" & InputFile & "]の" & lineCount + 1 &"行目の読み込み成功"  
 			
 			' 読み込んだデータを一次配列に入れる
 	    	arrFields = Split(strLine,vbTab) 
@@ -174,7 +178,7 @@ Sub Unpivot()
 	        Next
 
 	        ' 項目名の出力
-	        strMessage = strFix & "Month" & vbTab & "Value" & vbCrLf
+	        strMessage = strFix & "Month" & vbTab & "Value" & vbTab & "Fiscal_Year_ID" & vbCrLf
 	        preout.WriteText strMessage,0
 
 	    '------------------------------------
@@ -186,7 +190,7 @@ Sub Unpivot()
 	        For intCounter = OutputStartMonth To ColumNum Step 1
 
                 ' 出力内容
-	            strMessage = strFix & columName(intCounter) & vbTab & arrFields(intCounter) & vbCrLf
+	            strMessage = strFix & columName(intCounter) & vbTab & arrFields(intCounter) & vbTab & year & vbCrLf
 
                 '------------------------------------
 				' 縦横変換時のエラーチェック
@@ -226,28 +230,41 @@ Sub Unpivot()
 	Dim bin
 	bin = preout.Read
 
-	' 出力ファイルにデータの書き込みを行う
+	' 出力ファイルへデータを渡す
 	output.Write(bin)
 	
-    '------------------------------------
-	' 出力ファイル書き込み時の最終エラーチェック
-	'------------------------------------
+    '------------------------------------------------------
+	' これまでの処理の中で一つでもエラーがあるかどうかのチェック
+	'------------------------------------------------------
 	If Err.Number <> 0 Then
+
+		' 異常終了ログの出力
+		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理異常終了============================="
+
+	Else
+
+		' 出力ファイルへ書き込む
+    	output.SaveToFile OutputFile,2
+
+		'-----------------------------------
+		' 出力ファイル書き込み時のエラーチェック
+		'-----------------------------------
+		If Err.Number <> 0 Then
 
 		' 異常終了ログの出力
 		log.WriteLine FormatDateTime(Now, 0) & " "& "エラー :" & Err.Description
 		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理異常終了============================="
 
-	Else
-
-		' 出力ファイルを保存する
-    	output.SaveToFile OutputFile,2
-		log.WriteLine FormatDateTime(Now, 0) & " "& "出力ファイルへの書き込み成功"
+		Else
 
 		' 正常終了ログの出力
+		log.WriteLine FormatDateTime(Now, 0) & " "& "出力ファイルへの書き込み成功"
 		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理正常終了============================="
 
+		End If
+
 	End If
+
 
 	' 縦横変換処理終了時に出力ファイルのStreamオブジェクトを閉じる
 	output.Close
