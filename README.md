@@ -1,275 +1,70 @@
-' -----------------------------------------------------------------------
-' 処理名    ：Unpivot.vbs
-' 処理概要  ：出荷台数データの縦横変換を行う
-' パラメータ：InputFile ：変換前tsvファイル
-'             OutputFile：変換後のtsvファイル
-' 作成者    ：Isogai Sho
-' 作成日    ：2018/10/18
-' -----------------------------------------------------------------------
-
-Option Explicit
-
-' エラー発生時にも処理を続行するよう設定
-On Error Resume Next
-
-' -----------------------------------
-' 定数宣言
-' -----------------------------------
-
-' 0行目のカラムを格納する配列の大きさ、固定文字＋4月から3月の出荷台数の出力をするループカウンタの最後の数
-Const ColumNum = 18 
-
-' 固定文字を格納するためのループカウンタの最後の数字
-Const OutputStrFix = 6 
-
-' 固定文字＋4月から3月の出荷台数の出力をするループカウンタの最初の数
-Const OutputStartMonth = 7 
-
-' Unpivot.logはコマンドライン引数では渡さない（コマンドライン引数として渡してしまうと、エラーによってはエラー情報をログに残せないため）
-Const LogFile = "Log\Unpivot.log" 
-
-'------------------------------------
-' 変数宣言
-'------------------------------------
-
-' 読み込まれたデータを代入する変数
-Dim strLine 
-
-' 読み込んだデータを配列に入れるための配列宣言
-Dim arrFields 
-
-' 表示用のメッセージ変数
-Dim strMessage 
-
-' 固定文字格納用の変数
-Dim strFix 
-
-' 0行目のカラムを格納する配列宣言
-Dim columName() 
-ReDim columName(ColumNum) 
-
-' 0行目のカラムを格納する配列宣言
-Dim lineCount 
-lineCount = 0
-
-' ループカウンタ
-Dim intCounter 
-intCounter = 0
-
-' 出荷台数データファイルパスをコマンドラインから受け取る
-Dim InputFile 
-InputFile = WScript.Arguments(0)
-
-' Unpivot変換後のファイルパスをコマンドラインから受け取る
-Dim OutputFile
-OutputFile = WScript.Arguments(1)
-
-' ログファイルの指定（ない場合、新規作成）
-Dim objFso
-Dim log
-Set objFso = CreateObject("Scripting.FileSystemObject")
-
-' 読み込みファイルの指定 
-Dim input
-Set input = CreateObject("ADODB.Stream")
-input.Type = 2
-input.Charset = "UTF-8"
-input.Open
-input.LoadFromFile InputFile
-
-' 出力ファイルの指定 （新規作成）
-Dim output
-Set output = CreateObject("ADODB.Stream")
-output.Type = 1
-
-' 一時書き込みファイルの指定（BOMなしにするため）
-Dim preout
-Set preout = CreateObject("ADODB.Stream")
-preout.Type = 2
-preout.Charset = "UTF-8"
-
-' 最終項目に年度を追記するための変数（取得するコマンドライン引数から数字の部分を抜き出す）
-Dim year
-year = Mid(InputFile,9,4)
-
-'------------------------------------
-' ファイルの有無チェック
-'------------------------------------
-
-If Err.Number = 0 Then
-
-	' ログを上書きモードに
-	Set log = objFso.OpenTextFile(LogFile, 2, True)
-
-	' 処理開始ログの出力
-	log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理開始================================"
-
-	' 縦横変換処理を行う
-	Unpivot
-
-Else 
-	' ログを上書きモードに
-	Set log = objFso.OpenTextFile(LogFile, 2, True)
-
-	' エラーログの出力
-	log.WriteLine FormatDateTime(Now, 0) & " " & "エラー :" & Err.Description 
-
-End If
-
-' Stream を閉じる
-input.Close
-log.Close
-
-Err.Clear
-On Error Goto 0
-
-
-'------------------------------------
-' メイン処理（縦横変換）
-'------------------------------------
-
-Sub Unpivot()
-
-	' 縦横変換開始時に出力ファイル、一次書き込みファイルのStreamオブジェクトを開く
-	output.Open
-	preout.Open
-
-    ' エラー発生時にも処理を続行するよう設定
-    On Error Resume Next
-
-	' 縦横変換開始
-	Do Until input.EOS
-
-	    ' ファイルを1行ずつ読み込む。-2という数字は一行ずつ呼び込むことを表す
-	    strLine = input.ReadText(-2) 
-
-	    '------------------------------------
-		' 読み込みチェック
-		'------------------------------------
-		If Err.Number <> 0 Then
-			' エラーの場合、ループを抜けてエラーメッセージの表示をして異常終了をする
-	    	log.WriteLine FormatDateTime(Now, 0)& " " & "エラー :" & Err.Description 
-            Exit Do
-
-	    Else
-		
-			' 読み込み成功の場合、読み込み成功の旨のメッセージを表示する
-	    	log.WriteLine FormatDateTime(Now, 0)& " " & "出荷台数データ [" & InputFile & "]の" & lineCount + 1 &"行目の読み込み成功"  
-			
-			' 読み込んだデータを一次配列に入れる
-	    	arrFields = Split(strLine,vbTab) 
-
-	    	' 縦横変換の際の固定文字を格納する
-	    	strFix = "" 
-			For intCounter = 0 To OutputStrFix Step 1
-	        	strFix = strFix & arrFields(intCounter) & vbTab
-	    	Next
-
-	    End If
-
-	    '------------------------------------
-		' １行目を一時ファイルへ出力する処理
-		'------------------------------------
-	    If lineCount = 0 Then
-
-	        ' 項目名は配列に格納（縦横変換の値で使用するため）
-	        For intCounter = 0 To ColumNum Step 1
-	            columName(intCounter) = arrFields(intCounter)
-	        Next
-
-	        ' 項目名の出力
-	        strMessage = strFix & "Month" & vbTab & "Value" & vbTab & "Fiscal_Year_ID" & vbCrLf
-	        preout.WriteText strMessage,0
-
-	    '------------------------------------
-		' ２行目以降を一時ファイルへ出力する処理
-		'------------------------------------
-	    Else
-
-	        ' 固定文字＋4月から3月の出荷台数の出力（縦横変換）
-	        For intCounter = OutputStartMonth To ColumNum Step 1
-
-                ' 出力内容
-	            strMessage = strFix & columName(intCounter) & vbTab & arrFields(intCounter) & vbTab & year & vbCrLf
-
-                '------------------------------------
-				' 縦横変換時のエラーチェック
-				'------------------------------------
-                If Err.Number <> 0 Then
-	    	        log.WriteLine FormatDateTime(Now, 0)& " " & "エラー :" & Err.Description 
-                    Exit Do
-	            ElseIf Err.Number = 0 AND intCounter = ColumNum Then
-	    	        log.WriteLine FormatDateTime(Now, 0)& " " & "出荷台数データ [" & InputFile & "]の" & lineCount + 1 &"行目の縦横変換成功"  
-	            End If
-
-                ' 一時書き込み
-	            preout.WriteText strMessage,0
-	        Next
-	    End If
-
-        '------------------------------------
-		' 一時書き込み時のエラーチェック
-		'------------------------------------
-	    If Err.Number <> 0 Then
-	    	log.WriteLine FormatDateTime(Now, 0)& " " & "エラー :" & Err.Description 
-            Exit Do
-	    Else
-	    	log.WriteLine FormatDateTime(Now, 0)& " " & "出荷台数データ [" & InputFile & "]の" & lineCount + 1 &"行目の一時書き込み成功"  
-	    End If
-
-	    ' ループカウンタを増やす
-	    lineCount = lineCount + 1
-	Loop
-
-	' バイナリモードにする（BOMをスキップする）
-    preout.Position = 0
-	preout.Type = 1
-	preout.Position = 3
-    
-	' 一時書き込みファイルデータの内容を読み込む
-	Dim bin
-	bin = preout.Read
-
-	' 出力ファイルへデータを渡す
-	output.Write(bin)
-	
-    '------------------------------------------------------
-	' これまでの処理の中で一つでもエラーがあるかどうかのチェック
-	'------------------------------------------------------
-	If Err.Number <> 0 Then
-
-		' 異常終了ログの出力
-		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理異常終了============================="
-
-	Else
-
-		' 出力ファイルへ書き込む
-    	output.SaveToFile OutputFile,2
-
-		'-----------------------------------
-		' 出力ファイル書き込み時のエラーチェック
-		'-----------------------------------
-		If Err.Number <> 0 Then
-
-		' 異常終了ログの出力
-		log.WriteLine FormatDateTime(Now, 0) & " "& "エラー :" & Err.Description
-		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理異常終了============================="
-
-		Else
-
-		' 正常終了ログの出力
-		log.WriteLine FormatDateTime(Now, 0) & " "& "出力ファイルへの書き込み成功"
-		log.WriteLine FormatDateTime(Now, 0) & " "& "出荷台数データファイル加工処理正常終了============================="
-
-		End If
-
-	End If
-
-
-	' 縦横変換処理終了時に出力ファイルのStreamオブジェクトを閉じる
-	output.Close
-	preout.Close
-	Err.Clear
-	On Error Goto 0
-	
-End Sub
+１．パーソナル　成長の原動力
+"・指示された業務の意図を自分から理解するように努め、段取りを自分で考えて決めることができる
+・サポートを受けながらでもプロ意識をもって仕事に取組み、成果物に対して責任を持つ
+・自分で目標をたて、達成するためにはどうすればいいかを考えて実践し、自分の行動を振り返り、改善していくことができている"
+
+2.コミュニケーション　メンバーシップ
+"・ビジネスマナーに関して一通りのことができるようになる
+・簡単な作業なら自分で各種調整ができるようになる
+・的外れであっても自分の意見を積極的に出していく
+・チームの一員として、自分の役割だけでなく、ほかのメンバーの役割、状況を理解した立ち振る舞いをとれるようになる"
+
+達成した点
+・意見を伝える際は、自分の中で思いつくだけの視点から考えた最良の案を言うことができた
+・他のチームメンバーにテストで使用するテーブルのデータを変更することを確認とってからテストすることができた
+
+課題
+・自分が意見を伝える上での視点の数を増やし、意見の精度を上げていく
+・
+
+3．報連相、社会人基礎
+"・相手の状況や立場を考慮した上で、相手にとって必要な情報を、適切なタイミングで伝えることができる
+・伝えるべきことを簡潔にまとめ、事実と意見をわけた報連相を行えるようになる
+・目標設定の意味を理解し、自分の目指す姿が見え始められるような目標を作成できる
+・QCDを意識して業務に取り組めるようになる。特に品質を重視して取り組む。"
+
+達成した点
+・上司のスケジュールを把握してから報連相を行えた（緊急性が高くないもの）
+・
+
+課題
+・緊急性をより意識した報連相を行う
+　（緊急性が高いものは口頭で行ったり、低いものに関してはメールで報連相を行ったり等）
+
+4．ドキュメンテーション
+"・ドキュメント作成で必要なプロセスとポイントを理解している
+・わかりやすい構成・要点が絞られている・適切な表現でかかれているドキュメントを、チームメンバーのフォローを受けつつ作成することができる"
+
+達成した点
+・構成、要点の点では一度受けた指摘事項を二回も指摘されることがなくなり、徐々に指摘事項が減ってきている
+
+課題
+・ドキュメント内の文章の表現力を向上させる
+
+5．タイムマネジメント    4点
+"・タスクの自己見積もりと優先順位付けをし、指示者にその内容を相談できている
+・スケジュールを立てて作業に取組み、進捗を報告できるようになる
+・課題や進捗の遅れがある場合は適宜相談できるようになる"
+
+達成した点
+・案件の合間に保守作業が入った際、優先順位を考え作業に区切りをつけながら進めることができた
+・2週間規模の案件のタスクの洗い出しを行うことができ、進捗の遅れがある場合は適宜相談し、上司とスケジュールを再構築することができた
+
+これから
+・仕事の難易度が上がっても、案件の工数見積もりの精度を今までの経験を通してあげる
+
+
+6. コーディング
+"・既存のプログラムコードを一人で読み理解できる
+・案件管理者の見積もり工数として0.25人月分のプログラム仕事をフォローを受けながらやり切れる
+・フレームワーク、デザインパターン等を身に着け、効率の良い開発方法を取得する"
+
+7. テスティング
+"・指示された単体テスト、結合テスト設計書に沿ってテストを実施することができている
+・システムの処理内容を理解し、網羅的な単体テストケースが書けるようになる
+・作成したシステムを理解し、利用者の観点からユーザが納得感を得れるような、過不足のない結合テストケースが書けるようになる"
+
+８．データベーススキル
+"・テーブル設計の概念を理解できている（概念を説明できるレベル）
+・テーブル定義書とER図を読み理解できていること
+・担当案件のテーブル構造を理解し、上位者と確認しながらDB処理の実装を行えるようになる"
