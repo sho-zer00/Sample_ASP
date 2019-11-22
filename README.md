@@ -57,3 +57,7 @@
 チームの皆さんからアドバイスをもらいながら、提案できるようになる。
 
 ・お客様からの要望を引き出す力を伸ばすために、日々の会話を通じて自分が相手から欲しい情報を引き出せるようになる
+
+
+
+https://ytas.obc-service.biz/zbmqgpwjstrejaigs4wj5iclee22h9undms53qbxq9ubc6unl13fewmgz0c1/Presenter
